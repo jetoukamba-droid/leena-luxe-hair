@@ -1,4 +1,4 @@
-const ADMIN_EMAIL = "tlinvestmentproperties@gmail.com";
+const ADMIN_EMAILS = ["tlinvestmentproperties@gmail.com", "leenaluxehair@gmail.com"];
 const ADMIN_TEMPORARY_PASSWORD = "LeenaLuxe@2026!";
 const USERS_KEY = "leena-luxe-users";
 const SESSION_KEY = "leena-luxe-admin-session";
@@ -30,32 +30,35 @@ const writeUsers = (users, storage = window.localStorage) => {
 
 export const ensureDefaultAdminAccount = (storage = window.localStorage) => {
   const users = readUsers(storage);
-  const adminEmail = normalizeEmail(ADMIN_EMAIL);
-  const existingIndex = users.findIndex((user) => normalizeEmail(user.email) === adminEmail);
-  const adminRecord = {
-    id: "admin-leena-luxe-owner",
-    email: adminEmail,
+  const adminRecords = ADMIN_EMAILS.map((email, index) => ({
+    id: index === 0 ? "admin-leena-luxe-owner" : `admin-leena-luxe-${index + 1}`,
+    email: normalizeEmail(email),
     role: "admin",
     permissions: ["*"],
     passwordHash: hashCredential(ADMIN_TEMPORARY_PASSWORD),
     createdBy: "system",
-  };
+  }));
 
-  if (existingIndex >= 0) {
-    const existing = users[existingIndex];
-    users[existingIndex] = {
-      ...existing,
-      email: adminEmail,
-      role: "admin",
-      permissions: Array.isArray(existing.permissions) && existing.permissions.includes("*") ? existing.permissions : ["*"],
-      passwordHash: existing.passwordHash || adminRecord.passwordHash,
-    };
-    writeUsers(users, storage);
-    return users[existingIndex];
-  }
+  adminRecords.forEach((adminRecord) => {
+    const existingIndex = users.findIndex((user) => normalizeEmail(user.email) === adminRecord.email);
 
-  writeUsers([...users, adminRecord], storage);
-  return adminRecord;
+    if (existingIndex >= 0) {
+      const existing = users[existingIndex];
+      users[existingIndex] = {
+        ...existing,
+        email: adminRecord.email,
+        role: "admin",
+        permissions: Array.isArray(existing.permissions) && existing.permissions.includes("*") ? existing.permissions : ["*"],
+        passwordHash: adminRecord.passwordHash,
+      };
+      return;
+    }
+
+    users.push(adminRecord);
+  });
+
+  writeUsers(users, storage);
+  return adminRecords;
 };
 
 export const verifyAdminCredentials = (email, password, storage = window.localStorage) => {
